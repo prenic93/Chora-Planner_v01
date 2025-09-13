@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canzoniere Digitale</title>
+    <!-- Riferimento al manifest per la PWA -->
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" type="image/png" sizes="32x32" href="./icon-32.png">
+    <meta name="theme-color" content="#3B82F6">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="./assets/css/styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Install Prompt -->
+        <div id="installPrompt" class="install-prompt hidden">
+            <p>Installa l'app per un accesso più veloce e funzionalità offline!</p>
+            <button id="installBtn" class="btn btn-success btn-sm">
+                <i class="fas fa-download"></i> Installa App
+            </button>
+        </div>
+
+        <!-- Offline Status Indicator -->
+        <div id="offlineIndicator" class="offline-indicator hidden">
+            <i class="fas fa-wifi-slash"></i>
+            <span>Modalità Offline - I tuoi dati sono salvati localmente</span>
+        </div>
+
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1><i class="fas fa-music"></i> Chora Planner</h1>
+                <div class="header-actions">
+                    <button class="btn btn-secondary btn-sm" id="refreshBtn" title="Aggiorna">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="btn btn-secondary btn-sm" id="helpBtn" title="Aiuto">
+                        <i class="fas fa-question-circle"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="container">
+            <div style="display: flex; gap: 16px; justify-content: flex-end; margin-bottom: 16px;">
+                <button class="btn btn-success" id="exportDataBtn"><i class="fas fa-upload"></i> Esporta dati</button>
+                <button class="btn btn-secondary" id="importDataBtn"><i class="fas fa-download"></i> Importa dati</button>
+                <button class="btn btn-danger" id="resetAppBtn" title="Resetta e cancella tutto"><i class="fas fa-trash-alt"></i> Reset App</button>
+                <input type="file" id="importDataInput" accept=".json,.zip" style="display:none;" />
+            </div>
+            <!-- Navigation -->
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-tab="pdfs">
+                    <i class="fas fa-file-pdf"></i> PDF
+                </button>
+                <button class="nav-tab" data-tab="events">
+                    <i class="fas fa-calendar-alt"></i> Eventi
+                </button>
+            </div>
+
+            <!-- PDF Tab -->
+            <div id="pdfs-tab" class="tab-content active">
+                <div class="pdf-section-flex">
+                    <div class="pdf-upload-col">
+                        <div class="card">
+                            <div class="card-header" style="margin-bottom: 10px;">
+                                <h2 style="font-size:1.1em;"><i class="fas fa-cloud-upload-alt"></i> Carica PDF</h2>
+                                <div class="progress-container hidden" id="uploadProgress">
+                                    <div class="progress-bar" id="progressBar"></div>
+                                </div>
+                            </div>
+                            <div class="upload-area" id="uploadArea">
+                                <div>
+                                    <div class="upload-icon">
+                                        <i class="fas fa-cloud-upload-alt"></i>
+                                    </div>
+                                    <h3>Trascina qui il file PDF</h3>
+                                    <p>oppure clicca</p>
+                                    <small>Max 50MB</small>
+                                </div>
+                                <input type="file" id="pdfInput" accept=".pdf" style="display: none;">
+                            </div>
+                            <div style="margin-top: 12px;">
+                                <button class="btn btn-secondary btn-sm" id="reindexPdfsBtn" style="width: 100%;">
+                                    <i class="fas fa-search"></i> Ricostruisci Indice Ricerca
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pdf-list-col">
+                        <div class="card">
+                            <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+                                <h2><i class="fas fa-list-ul"></i> PDF Caricati</h2>
+                            </div>
+                            <div id="pdfList"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Events Tab -->
+            <div id="events-tab" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <h2><i class="fas fa-calendar-check"></i> I Tuoi Eventi</h2>
+                        <button class="btn btn-primary" id="addEventBtn"><i class="fas fa-plus"></i> Crea Evento</button>
+                    </div>
+                    <div id="eventList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PDF Viewer -->
+        <div class="pdf-viewer" id="pdfViewer">
+            <div class="pdf-controls">
+                <button class="btn btn-danger btn-sm" id="closePdfBtn"><i class="fas fa-times"></i> Chiudi</button>
+                <div class="pdf-search-container">
+                    <input type="text" class="pdf-search" id="pdfSearchInput" placeholder="Cerca nel PDF...">
+                    <button class="search-clear" id="searchClear"><i class="fas fa-times"></i></button>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="showAnnotationsListBtn"><i class="fas fa-list-ol"></i> <span>Annotazioni</span></button>
+                <button class="btn btn-secondary btn-sm" id="indexCurrentPdfBtn"><i class="fas fa-search-plus"></i> <span>Indicizza PDF</span></button>
+                <button class="annotation-toggle" id="toggleAnnotationMode"><i class="fas fa-palette"></i></button>
+            </div>
+            <div class="pdf-canvas-container" id="pdfCanvasContainer">
+                <canvas class="pdf-canvas" id="pdfCanvas"></canvas>
+                <canvas class="drawing-canvas" id="drawingCanvas"></canvas>
+            </div>
+            <div class="pdf-navigation">
+                <button class="btn btn-primary btn-sm" id="prevPage"><i class="fas fa-arrow-left"></i></button>
+                <span class="page-info-display" id="pageInfo"></span>
+                <input type="range" class="pdf-slider" id="pdfSlider" min="1" max="1" value="1">
+                <button class="btn btn-primary btn-sm" id="nextPage"><i class="fas fa-arrow-right"></i></button>
+            </div>
+            <div class="zoom-indicator" id="zoomIndicator">100%</div>
+            <div class="annotation-controls">
+                <div class="annotation-tools" id="annotationTools">
+                    <button class="annotation-tool pen active" data-tool="pen"><i class="fas fa-pen"></i></button>
+                    <button class="annotation-tool eraser" data-tool="eraser"><i class="fas fa-eraser"></i></button>
+                    <button class="annotation-tool note" data-tool="note"><i class="fas fa-sticky-note"></i></button>
+                </div>
+            </div>
+            <div class="search-results" id="searchResults"></div>
+        </div>
+
+        <!-- Modals -->
+        <div id="eventModal" class="modal">
+            <div class="modal-content">
+                <h2 id="eventModalTitle">Crea Nuovo Evento</h2>
+                <form id="eventForm">
+                    <input type="hidden" id="eventId">
+                    <div class="form-group">
+                        <label for="eventName">Nome Evento</label>
+                        <input type="text" id="eventName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventDescription">Descrizione</label>
+                        <textarea id="eventDescription" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Salva Evento</button>
+                    <button type="button" class="btn btn-secondary modal-close">Annulla</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="eventDetailModal" class="modal">
+            <div class="modal-content">
+                <div class="event-detail-header">
+                    <h2 id="eventDetailName"></h2>
+                    <div class="event-detail-actions">
+                        <button class="btn btn-success btn-sm" id="exportEventPdfBtn"><i class="fas fa-file-pdf"></i> Esporta PDF</button>
+                        <button class="btn btn-primary btn-sm" id="reorderBtn"><i class="fas fa-sort"></i> Riorganizza</button>
+                    </div>
+                </div>
+                <div id="eventPagesList" class="page-list"></div>
+                <div>
+                    <button class="btn btn-secondary modal-close">Chiudi</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="helpModal" class="modal">
+            <div class="modal-content">
+                <h2>Aiuto</h2>
+                <p>...</p>
+                <button class="btn btn-secondary modal-close">Chiudi</button>
+            </div>
+        </div>
+
+        <div id="annotationsListModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Annotazioni nel PDF</h3>
+                    <button class="modal-close"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body">
+                    <div id="annotationsList" class="annotations-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div id="toast" class="toast"></div>
+
+        <!-- Loading -->
+        <div id="loading" class="loading hidden"></div>
+
+        <!-- PDF Export Progress Bar -->
+        <div id="pdfExportProgressBarWrapper">
+            <div id="pdfExportProgressBar"></div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script type="module" src="./assets/js/app.js"></script>
+    <script src="./assets/js/offline-manager.js"></script>
+</body>
+</html>
